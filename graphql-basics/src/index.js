@@ -9,51 +9,43 @@ import { GraphQLServer } from "graphql-yoga";
 // !は必須項目
 const typeDefs = `
   type Query {
+    me: User!
+    post: Post!
+  }
+
+  type User {
     id: ID!
     name: String!
-    age: Int!
-    employed: Boolean!
-    gpa: Float
+    email: String!
+    age: Int
+  }
+
+  type Post {
+    id: ID!
     title: String!
-    price: Float!
-    releaseYear: Int
-    rating: Float
-    inStock: Boolean!
+    body: String!
+    published: Boolean!
   }
 `;
 
 // Resolvers
 const resolvers = {
   Query: {
-    id() {
-      return "abc123";
+    me() {
+      return {
+        id: "12451",
+        name: "mike",
+        email: "mike@example.com",
+        age: 28
+      };
     },
-    name() {
-      return "Andrew";
-    },
-    age() {
-      return 23;
-    },
-    employed() {
-      return true;
-    },
-    gpa() {
-      return 3.1; // nullも可能
-    },
-    title() {
-      return "udemy";
-    },
-    price() {
-      return 12.99;
-    },
-    releaseYear() {
-      return 2019;
-    },
-    rating() {
-      return null;
-    },
-    inStock() {
-      return true;
+    post() {
+      return {
+        id: "1",
+        title: "First post",
+        body: "",
+        published: false
+      };
     }
   }
 };
