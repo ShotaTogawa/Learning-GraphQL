@@ -1,9 +1,10 @@
 import { GraphQLServer } from "graphql-yoga";
+import uuidv4 from "uuid/v4";
 
 // Scalar types - String, Boolean, Int, Float, ID
 
 // Demo user data
-const users = [
+let users = [
   {
     id: "1",
     name: "Andrew",
@@ -22,7 +23,7 @@ const users = [
   }
 ];
 
-const posts = [
+let posts = [
   {
     id: "10",
     title: "GraphQL 101",
@@ -49,7 +50,7 @@ const posts = [
   }
 ];
 
-const comments = [
+let comments = [
   {
     id: "1",
     text: "comment1",
@@ -84,6 +85,34 @@ const typeDefs = `
         me: User!
         post: Post!
         comments: [Comment!]!
+    }
+
+    type Mutation {
+        createUser(data: CreateUserInput!): User!
+        deleteUser(id: ID!): User!
+        createPost(data: CreatePostInput!): Post!
+        deletePost(postId: ID!): Post!
+        createComment(data: CreateCommentInput!): Comment!
+        deleteComment(commentId: ID!): Comment!
+    }
+
+    input CreateUserInput {
+      name: String!
+      email: String!
+      age: Int
+    }
+
+    input CreatePostInput{
+      title: String!,
+      body: String!,
+      published: Boolean,
+      author: ID!
+    }
+
+    input CreateCommentInput {
+      text: String!,
+      author: ID!,
+      post: ID!
     }
 
     type User {
@@ -156,6 +185,106 @@ const resolvers = {
         body: "",
         published: false
       };
+    }
+  },
+  Mutation: {
+    createUser(parent, args, ctx, info) {
+      const emailTaken = users.some(user => user.email === args.data.email);
+      if (emailTaken) {
+        throw new Error("Emial taken");
+      }
+
+      const user = {
+        id: uuidv4(),
+        ...args.data
+      };
+
+      users.push(user);
+      return user;
+    },
+    deleteUser(parent, args, ctx, info) {
+      const userIndex = users.findIndex(user => user.id === args.id);
+
+      if (userIndex === -1) {
+        throw new Error("user not found");
+      }
+
+      const deletedUsers = users.splice(userIndex, 1);
+      posts = posts.filter(post => {
+        const match = post.author === args.id;
+
+        if (match) {
+          comments = comments.filter(comment => comment.post !== post.id);
+        }
+        return !match;
+      });
+
+      comments = comments.filter(comment => comment.author !== args.id);
+      return deletedUsers[0];
+    },
+    createPost(parent, args, ctx, info) {
+      const userExists = users.some(user => user.id === args.data.author);
+      if (!userExists) {
+        throw new Error("User not found");
+      }
+
+      const post = {
+        id: uuidv4(),
+        ...args.data
+        // title: args.title,
+        // body: args.body,
+        // published: args.published,
+        // author: args.author
+      };
+
+      posts.push(post);
+      return post;
+    },
+    deletePost(parent, args, ctx, info) {
+      const postIndex = posts.findIndex(post => post.id === args.postId);
+
+      if (postIndex === -1) {
+        throw new Error("post not found");
+      }
+
+      const deletedPost = posts.splice(postIndex, 1);
+
+      comments = comments.filter(comment => comment.post !== args.postId);
+      return deletedPost[0];
+    },
+    createComment(parent, args, ctx, info) {
+      const userExists = users.some(user => user.id === args.data.author);
+      const postExists = posts.some(
+        post => post.id === args.data.post && post.published
+      );
+      if (!userExists || !postExists) {
+        throw new Error("unable to find user and post");
+      }
+
+      const comment = {
+        id: uuidv4(),
+        ...args.data
+        // text: args.text,
+        // author: args.author,
+        // post: args.post
+      };
+
+      comments.push(comment);
+      return comment;
+    },
+    deleteComment(parent, args, ctx, info) {
+      const commentIndex = comments.findIndex(
+        comment => comment.id === args.commentId
+      );
+
+      if (commentIndex === -1) {
+        throw new Error("comment not found");
+      }
+
+      const deletedComment = comments.splice(commentIndex, 1);
+
+      comments = comments.filter(comment => comment.id !== args.commentId);
+      return deletedComment[0];
     }
   },
   Post: {
